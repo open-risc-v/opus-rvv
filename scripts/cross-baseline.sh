@@ -9,6 +9,7 @@
 # cmake/ninja/meson/autotools）。没有就先用 scripts/docker-cross.sh 建。
 # 上游构建系统不是 CMake 时，只改 "编上游" 那一段（见 references/adapt-build-system.md §8）。
 #
+# opus 用固定点构建（OPUS_FIXED_POINT=ON）：浮点路径会随编译器抖动，位精确判据失效。
 # 纪律：这里只编 baseline，不编 src，也不开 RVV_KERNELS —— 它回答"上游在 riscv64 上
 # 能不能编、能不能跑、输出和 native 是否一致"，性能数字一律不从这里取。
 set -euo pipefail
@@ -17,7 +18,7 @@ cd "$(dirname "$0")/.."
 IMAGE=${IMAGE:-rvv-cross:1}
 MARCH=${MARCH:-rv64gc}
 OUT=build/riscv64-b
-HARNESS=${HARNESS:-pkg_harness}   # test/ 下探针的可执行名（target 名）
+HARNESS=${HARNESS:-opus_harness}   # test/ 下探针的可执行名（target 名）
 
 docker run --rm -v "$PWD":/work -w /work "${IMAGE}" bash -lc "
 set -e
@@ -27,6 +28,9 @@ rm -rf ${OUT}
 cmake -S baseline -B ${OUT}/bld \
   -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/work/${OUT}/prefix \
   -DBUILD_SHARED_LIBS=OFF \
+  -DOPUS_BUILD_SHARED_LIBRARY=OFF -DOPUS_BUILD_PROGRAMS=OFF -DOPUS_BUILD_TESTING=OFF \
+  -DOPUS_FIXED_POINT=ON -DOPUS_DISABLE_INTRINSICS=ON \
+  -DOPUS_INSTALL_PKG_CONFIG_MODULE=OFF -DOPUS_INSTALL_CMAKE_CONFIG_MODULE=OFF \
   -DCMAKE_TOOLCHAIN_FILE=/work/cmake/toolchain-riscv64-linux.cmake \
   -DCMAKE_C_FLAGS='-march=${MARCH}' > /tmp/cfg.log 2>&1 || { tail -30 /tmp/cfg.log; exit 1; }
 cmake --build ${OUT}/bld -j > /tmp/bld.log 2>&1 || { tail -20 /tmp/bld.log; exit 1; }
@@ -41,7 +45,7 @@ cmake --build ${OUT}/harness -j > /tmp/hb.log 2>&1 || { tail -20 /tmp/hb.log; ex
 
 # 3) 跑（qemu-user + 目标 sysroot）
 cd /work && mkdir -p ${OUT}/out
-qemu-riscv64 -L /usr/riscv64-linux-gnu ${OUT}/harness/${HARNESS} ${OUT}/out/out.bin > ${OUT}/out/hash.txt
+qemu-riscv64 -L /usr/riscv64-linux-gnu ${OUT}/harness/${HARNESS} ${OUT}/out/hash.txt > ${OUT}/out/hash.txt
 echo \"--- riscv64（${MARCH}）---\"; cat ${OUT}/out/hash.txt
 echo \"--- native 基线 ---\"; cat build/ab-data/out/01_*/a/hash.txt
 "
