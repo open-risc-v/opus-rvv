@@ -102,6 +102,10 @@ static void find_best_pitch(opus_val32 *xcorr, opus_val16 *y, int len,
    }
 }
 
+#if HAVE_RVV_KERNELS && defined(FIXED_POINT)
+#include "riscv/pitch_xcorr_rvv.c"
+#endif
+
 static void celt_fir5(opus_val16 *x,
          const opus_val16 *num,
          int N)

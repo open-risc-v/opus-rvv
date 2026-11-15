@@ -185,6 +185,16 @@ void
 celt_pitch_xcorr_c(const opus_val16 *_x, const opus_val16 *_y,
       opus_val32 *xcorr, int len, int max_pitch, int arch);
 
+#if HAVE_RVV_KERNELS && defined(FIXED_POINT)
+/* RVV 定点实现：celt/riscv/pitch_xcorr_rvv.c（同一 TU include 进 pitch.c）。
+   只覆盖 pitch search 的 celt_pitch_xcorr；celt_lpc.c 用的 xcorr_kernel 仍是 C。 */
+opus_val32 celt_pitch_xcorr_rvv(const opus_val16 *_x, const opus_val16 *_y,
+      opus_val32 *xcorr, int len, int max_pitch);
+# define OVERRIDE_PITCH_XCORR
+# define celt_pitch_xcorr(_x, _y, xcorr, len, max_pitch, arch) \
+    ((void)(arch),celt_pitch_xcorr_rvv(_x, _y, xcorr, len, max_pitch))
+#endif
+
 #ifndef OVERRIDE_PITCH_XCORR
 # define celt_pitch_xcorr celt_pitch_xcorr_c
 #endif
