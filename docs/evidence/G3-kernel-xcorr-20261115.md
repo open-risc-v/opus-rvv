@@ -4,7 +4,7 @@
 - 上游：`xiph/opus` @ `0145a6248c2171bb6c4e03fb54fe016b5123e37e`
 - 构建：CMake 定点（`OPUS_FIXED_POINT=ON`），两侧同为 `-march=rv64gcv`，
   唯一变量 `-DHAVE_RVV_KERNELS=1`
-- 目标板：SpacemiT K3 / Bianbu，`Linux k3 6.18.3 riscv64`，RVV 1.0
+- 目标板：SpacemiT K3 / <distro>，`Linux k3 6.18.3 riscv64`，RVV 1.0
 
 ## 1. 选型理由
 
